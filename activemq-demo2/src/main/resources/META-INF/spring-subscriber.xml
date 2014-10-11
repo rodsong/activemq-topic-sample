@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jms="http://www.springframework.org/schema/jms" xmlns:amq="http://activemq.apache.org/schema/core"
+	xsi:schemaLocation="http://www.springframework.org/schema/jms http://www.springframework.org/schema/jms/spring-jms-3.1.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd">
+
+	<context:component-scan base-package="com.jms.**" />
+	<context:annotation-config />
+
+    <bean id="redeliveryPolicy" class="org.apache.activemq.RedeliveryPolicy">
+        <property name="topic" value="keykiTopic"/>
+        <property name="maximumRedeliveries" value="3"/>
+        <property name="initialRedeliveryDelay" value="10000"/>
+    </bean>
+	<bean id="topicListenConnectionFactory" class="org.apache.activemq.spring.ActiveMQConnectionFactory">
+		<property name="brokerURL"
+                  value="tcp://localhost:61616" />
+        <property name="redeliveryPolicy" ref="redeliveryPolicy"/>
+	</bean>
+
+	<bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
+		<property name="connectionFactory" ref="topicListenConnectionFactory" />
+        <property name="pubSubDomain" value="true" />
+	</bean>
+
+	<!--<bean id="keykiQueue" class="org.apache.activemq.command.ActiveMQQueue">-->
+		<!--<constructor-arg value="keyki.queue" />-->
+	<!--</bean>-->
+
+	<bean id="keykiTopic" class="org.apache.activemq.command.ActiveMQTopic">
+		<constructor-arg value="keyki.topic" />
+	</bean>
+
+	<bean id="messageListener" class="com.jms.activemq.queue.Reciever" />
+	<!--<bean id="messageSubscriber1" class="com.jms.activemq.topic.Subscriber1" />-->
+	<bean id="messageSubscriber2" class="com.jms.activemq.topic.Subscriber2" />
+
+<!--	<jms:listener-container>
+		<jms:listener destination="keyki.queue" ref="messageListener" />
+	</jms:listener-container>-->
+
+<!--	<bean id="jmsContainer1"
+		class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+		<property name="connectionFactory" ref="connectionFactory" />
+		<property name="destination" ref="keykiTopic" />
+		<property name="messageListener" ref="messageSubscriber1" />
+	</bean>-->
+	<bean id="jmsContainer2"
+		class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+		<property name="connectionFactory" ref="topicListenConnectionFactory" />
+		<property name="destination" ref="keykiTopic" />
+        <!---这里是设置接收客户端的ID，在持久化时，但这个客户端不在线时，
+        消息就存在数据库里，知道被这个ID的客户端消费掉-->
+        <property name="clientId" value="clientId_002"/>
+        <property name="messageListener" ref="messageSubscriber2" />
+        <property name="subscriptionDurable" value="true"/>
+        <property name="sessionAcknowledgeMode" value="2"/>
+    </bean>
+
+</beans>
